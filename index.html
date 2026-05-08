@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FBZ">
+<meta name="theme-color" content="#1a1f2e">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>FBZ Zeiterfassung</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --ink:     #1a1f2e;
+    --ink2:    #4a5568;
+    --ink3:    #8896a8;
+    --paper:   #f7f6f2;
+    --card:    #ffffff;
+    --accent:  #2563eb;
+    --accent2: #1d4ed8;
+    --green:   #059669;
+    --red:     #dc2626;
+    --border:  #e2e8f0;
+    --shadow:  0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+    --radius:  14px;
+    --mono:    'DM Mono', monospace;
+    --sans:    'DM Sans', sans-serif;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bot: env(safe-area-inset-bottom, 0px);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    padding-bottom: calc(80px + var(--safe-bot));
+    overscroll-behavior: none;
+  }
+
+  .header {
+    background: var(--ink);
+    color: white;
+    padding: calc(16px + var(--safe-top)) 20px 14px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-top { display: flex; align-items: center; justify-content: space-between; }
+  .header h1  { font-size: 18px; font-weight: 600; letter-spacing: -.3px; }
+  .header-sub { font-size: 11px; color: #94a3b8; margin-top: 2px; font-family: var(--mono); }
+  .api-btn {
+    background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.15);
+    color: white; font-size: 11px; padding: 5px 10px;
+    border-radius: 8px; cursor: pointer; font-family: var(--sans);
+  }
+
+  .tabs {
+    display: flex; background: var(--ink); padding: 0 20px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .tab {
+    flex: 1; text-align: center; padding: 10px 0 12px;
+    font-size: 12px; font-weight: 500; color: #64748b;
+    border-bottom: 2px solid transparent; cursor: pointer; transition: all .2s;
+  }
+  .tab.active { color: white; border-bottom-color: var(--accent); }
+
+  .section { display: none; padding: 16px 16px 0; }
+  .section.active { display: block; }
+
+  .card {
+    background: var(--card); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 16px; margin-bottom: 12px;
+  }
+  .card-title {
+    font-size: 11px; font-weight: 600; color: var(--ink3);
+    text-transform: uppercase; letter-spacing: .08em; margin-bottom: 12px;
+  }
+
+  .upload-zone {
+    border: 2px dashed var(--border); border-radius: var(--radius);
+    padding: 32px 20px; text-align: center; cursor: pointer;
+    transition: all .2s; background: var(--paper); position: relative;
+  }
+  .upload-zone:active { border-color: var(--accent); background: #eff6ff; }
+  .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .upload-icon { font-size: 40px; margin-bottom: 10px; }
+  .upload-text { font-size: 15px; font-weight: 500; }
+  .upload-sub  { font-size: 12px; color: var(--ink3); margin-top: 4px; }
+
+  .preview-img {
+    width: 100%; border-radius: 10px; margin-bottom: 12px;
+    max-height: 220px; object-fit: cover;
+  }
+
+  .input-label {
+    font-size: 11px; font-weight: 600; color: var(--ink3);
+    text-transform: uppercase; letter-spacing: .06em;
+    margin-bottom: 6px; display: block;
+  }
+  .input-field {
+    width: 100%; padding: 11px 14px;
+    border: 1.5px solid var(--border); border-radius: 10px;
+    font-family: var(--sans); font-size: 13px; color: var(--ink);
+    background: var(--paper); outline: none; transition: border-color .2s;
+    -webkit-appearance: none;
+  }
+  .input-field:focus { border-color: var(--accent); }
+
+  .date-row { display: flex; gap: 8px; margin-bottom: 12px; }
+
+  .btn {
+    width: 100%; padding: 14px; border: none; border-radius: 12px;
+    font-family: var(--sans); font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: all .15s; letter-spacing: -.2px;
+  }
+  .btn-primary  { background: var(--accent); color: white; }
+  .btn-primary:active  { background: var(--accent2); transform: scale(.98); }
+  .btn-primary:disabled { background: var(--border); color: var(--ink3); cursor: not-allowed; }
+  .btn-secondary { background: var(--paper); color: var(--ink); border: 1.5px solid var(--border); font-size: 13px; padding: 11px; }
+  .btn-green { background: var(--green); color: white; }
+  .btn-red   { background: #fee2e2; color: var(--red); font-size: 13px; padding: 11px; border: none; }
+
+  .loading { text-align: center; padding: 32px 20px; display: none; }
+  .spinner {
+    width: 40px; height: 40px; margin: 0 auto 16px;
+    border: 3px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 14px; color: var(--ink2); }
+  .loading-sub  { font-size: 12px; color: var(--ink3); margin-top: 4px; }
+
+  .entry-item {
+    border: 1.5px solid var(--border); border-radius: 12px;
+    padding: 12px 14px; margin-bottom: 8px; background: var(--paper);
+  }
+  .entry-item.confirmed { border-color: #86efac; background: #f0fdf4; }
+  .entry-row { display: flex; gap: 8px; margin-bottom: 6px; }
+  .entry-row:last-child { margin-bottom: 0; }
+  .entry-field {
+    flex: 1; padding: 7px 10px;
+    border: 1px solid var(--border); border-radius: 8px;
+    font-family: var(--sans); font-size: 13px; color: var(--ink);
+    background: white; outline: none; -webkit-appearance: none;
+  }
+  .entry-field:focus { border-color: var(--accent); }
+  .entry-field.min { flex: 0 0 72px; text-align: center; font-family: var(--mono); }
+  .select-field {
+    flex: 1; padding: 7px 10px;
+    border: 1px solid var(--border); border-radius: 8px;
+    font-family: var(--sans); font-size: 13px; color: var(--ink);
+    background: white; outline: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238896a8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px;
+  }
+  .entry-actions { display: flex; gap: 6px; margin-top: 8px; }
+  .btn-confirm {
+    flex: 1; padding: 8px; border: none; border-radius: 8px;
+    background: var(--green); color: white; font-family: var(--sans);
+    font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .btn-delete {
+    padding: 8px 12px; border: none; border-radius: 8px;
+    background: #fee2e2; color: var(--red); font-size: 14px; cursor: pointer;
+  }
+  .entry-item.confirmed .entry-actions { display: none; }
+  .entry-confirmed-badge {
+    display: none; font-size: 11px; color: var(--green);
+    font-weight: 600; text-align: right; margin-top: 4px;
+  }
+  .entry-item.confirmed .entry-confirmed-badge { display: block; }
+
+  /* List Tab */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .stat-card { background: var(--card); border-radius: 12px; padding: 14px; box-shadow: var(--shadow); }
+  .stat-val { font-size: 22px; font-weight: 600; font-family: var(--mono); }
+  .stat-val.pos { color: var(--green); }
+  .stat-val.neg { color: var(--red); }
+  .stat-label { font-size: 11px; color: var(--ink3); margin-top: 3px; }
+
+  .filter-row { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px; }
+  .filter-chip {
+    padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--border);
+    font-size: 12px; font-weight: 500; white-space: nowrap; cursor: pointer;
+    background: white; color: var(--ink2); transition: all .15s; flex-shrink: 0;
+  }
+  .filter-chip.active { background: var(--ink); color: white; border-color: var(--ink); }
+
+  .entry-log-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .entry-log-item:last-child { border-bottom: none; }
+  .kw-badge {
+    background: var(--ink); color: white; border-radius: 6px;
+    padding: 2px 7px; font-family: var(--mono); font-size: 10px; white-space: nowrap;
+  }
+  .entry-date-badge {
+    background: var(--ink); color: white; border-radius: 8px;
+    padding: 4px 8px; font-family: var(--mono); font-size: 10px;
+    white-space: nowrap; flex-shrink: 0; margin-top: 4px;
+  }
+  .entry-log-details { flex: 1; min-width: 0; }
+  .entry-log-taet { font-size: 13px; font-weight: 500; }
+  .entry-log-fall { font-size: 11px; color: var(--ink3); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .entry-log-min { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--accent); white-space: nowrap; }
+  .entry-log-min.neg { color: var(--red); }
+
+  /* Export Tab */
+  .export-info {
+    background: #eff6ff; border-radius: 12px; padding: 12px 14px;
+    font-size: 12px; color: #1d4ed8; margin-bottom: 10px; border: 1px solid #bfdbfe;
+  }
+
+  .empty { text-align: center; padding: 40px 20px; color: var(--ink3); }
+  .empty-icon { font-size: 36px; margin-bottom: 10px; }
+  .empty-text { font-size: 14px; line-height: 1.6; }
+
+  .toast {
+    position: fixed; bottom: calc(90px + var(--safe-bot)); left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--ink); color: white; padding: 10px 20px;
+    border-radius: 20px; font-size: 13px; font-weight: 500;
+    opacity: 0; transition: all .3s; z-index: 999; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .notes-box {
+    background: #fffbeb; border: 1px solid #fcd34d; border-radius: 10px;
+    padding: 10px 12px; font-size: 12px; color: #92400e;
+    margin-top: 8px; display: none;
+  }
+  .notes-box.visible { display: block; }
+
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.5); z-index: 200; align-items: flex-end;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: white; border-radius: 20px 20px 0 0;
+    padding: 24px 20px calc(40px + var(--safe-bot));
+    width: 100%; max-height: 80vh; overflow-y: auto;
+  }
+  .modal h2 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .modal-close { float: right; background: none; border: none; font-size: 22px; cursor: pointer; color: var(--ink3); line-height: 1; }
+
+  .install-banner {
+    background: linear-gradient(135deg, #1d4ed8, #2563eb);
+    border-radius: var(--radius); padding: 14px 16px;
+    margin-bottom: 12px; display: none; align-items: center; gap: 12px;
+  }
+  .install-banner.visible { display: flex; }
+  .install-banner-text { flex: 1; font-size: 13px; color: white; line-height: 1.4; }
+  .install-banner-btn {
+    background: white; color: var(--accent); border: none;
+    border-radius: 8px; padding: 8px 14px; font-weight: 600;
+    font-size: 12px; cursor: pointer; white-space: nowrap; font-family: var(--sans);
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div>
+      <h1>FBZ Zeiterfassung</h1>
+      <div class="header-sub" id="header-sub">Schuljahr 2024/2025</div>
+    </div>
+    <button class="api-btn" onclick="openApiModal()">⚙ API-Key</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('scan', this)">📷 Scannen</div>
+  <div class="tab" onclick="switchTab('list', this)">📋 Einträge</div>
+  <div class="tab" onclick="switchTab('export', this)">📤 Export</div>
+</div>
+
+<!-- ── TAB 1: SCANNEN ── -->
+<div id="tab-scan" class="section active">
+
+  <div id="install-banner" class="install-banner">
+    <div class="install-banner-text">📱 <b>Als App installieren:</b> Teilen → „Zum Home-Bildschirm"</div>
+    <button class="install-banner-btn" onclick="dismissInstall()">OK</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Datum der Klassenbuchseite</div>
+    <div class="date-row">
+      <input type="date" id="scan-date" class="input-field">
+      <select id="scan-weekday" class="input-field" style="flex:0 0 132px">
+        <option>Montag</option><option>Dienstag</option><option>Mittwoch</option>
+        <option>Donnerstag</option><option>Freitag</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Klassenbuchseite fotografieren</div>
+    <div class="upload-zone" id="upload-zone">
+      <input type="file" accept="image/*" capture="environment"
+             id="file-input" onchange="handleImageSelect(event)">
+      <div class="upload-icon">📷</div>
+      <div class="upload-text">Foto aufnehmen</div>
+      <div class="upload-sub">Kamera öffnet sich direkt</div>
+    </div>
+    <img id="preview-img" class="preview-img" style="display:none">
+  </div>
+
+  <div id="loading" class="loading card">
+    <div class="spinner"></div>
+    <div class="loading-text">Claude liest das Klassenbuch…</div>
+    <div class="loading-sub">Handschrift wird erkannt und zugeordnet</div>
+  </div>
+
+  <div id="entries-section" style="display:none">
+    <div class="card">
+      <div class="card-title">Erkannte Einträge – prüfen & bestätigen</div>
+      <div id="entries-list"></div>
+      <div id="notes-box" class="notes-box"></div>
+    </div>
+    <button class="btn btn-green" onclick="confirmAll()" style="margin-bottom:8px">
+      ✓ Alle bestätigen & speichern
+    </button>
+    <button class="btn btn-secondary" onclick="resetScan()">↩ Neues Foto</button>
+  </div>
+
+  <div id="scan-ready" style="display:none; margin-top:4px">
+    <button class="btn btn-primary" onclick="startScan()">✦ Einträge erkennen</button>
+  </div>
+
+</div>
+
+<!-- ── TAB 2: EINTRÄGE ── -->
+<div id="tab-list" class="section">
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-val" id="stat-entries">0</div>
+      <div class="stat-label">Einträge gesamt</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="stat-saldo">±0:00</div>
+      <div class="stat-label">Saldo angerechnet</div>
+    </div>
+  </div>
+  <div class="filter-row" id="kw-filters">
+    <div class="filter-chip active" onclick="filterKW('all', this)">Alle KW</div>
+  </div>
+  <div class="card" style="padding:0 16px">
+    <div id="entries-log">
+      <div class="empty">
+        <div class="empty-icon">📋</div>
+        <div class="empty-text">Noch keine Einträge.<br>Starte mit dem Scannen.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TAB 3: EXPORT ── -->
+<div id="tab-export" class="section">
+  <div class="export-info">
+    💡 Einmal pro Woche exportieren. Die CSV-Datei passt direkt zu deiner FBZ Excel-Tabelle.
+  </div>
+  <div class="card">
+    <div class="card-title">CSV Export für Excel</div>
+    <p style="font-size:13px;color:var(--ink2);margin-bottom:14px;line-height:1.6">
+      Enthält: Datum, KW, Beratungsfall, Tätigkeit, Minuten, Angerechnet.<br>
+      Trennzeichen: Semikolon – direkt importierbar.
+    </p>
+    <button class="btn btn-primary" onclick="exportCSV()">⬇ CSV herunterladen</button>
+  </div>
+  <div class="card">
+    <div class="card-title">Import in Excel</div>
+    <div style="font-size:12px;color:var(--ink2);line-height:2">
+      1. CSV per AirDrop / iCloud auf PC/Mac<br>
+      2. Excel → <b>Daten</b> → <b>Aus Text/CSV</b><br>
+      3. Trennzeichen: <b>Semikolon</b> wählen<br>
+      4. In Erfassungstabelle einfügen
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Daten verwalten</div>
+    <p style="font-size:13px;color:var(--ink2);margin-bottom:14px;line-height:1.5">
+      Nach dem Export gespeicherte Einträge löschen.
+    </p>
+    <button class="btn btn-red" onclick="clearAllEntries()">🗑 Alle Einträge löschen</button>
+  </div>
+</div>
+
+<!-- ── API KEY MODAL ── -->
+<div class="modal-overlay" id="api-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeApiModal()">✕</button>
+    <h2>⚙ API-Schlüssel</h2>
+    <p style="font-size:12px;color:var(--ink3);margin:6px 0 16px;line-height:1.5">
+      Wird nur lokal auf deinem Gerät gespeichert.<br>
+      Erhältlich auf console.anthropic.com → API Keys.
+    </p>
+    <label class="input-label">Anthropic API Key</label>
+    <input type="password" id="api-key-input" class="input-field"
+           placeholder="sk-ant-..." style="margin-bottom:8px">
+    <p style="font-size:11px;color:var(--ink3);margin-bottom:16px">
+      Kosten: ~0,003 € pro Foto-Scan
+    </p>
+    <button class="btn btn-primary" onclick="saveApiKey()">Speichern</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const TAETIGKEITEN = [
+  'Beratung','Coaching','Diagnostik','Elterngespräch','Erkrankung',
+  'Fahrt','Fortbildung','Hospitation','Kollegialer Austausch',
+  'Konzeptionelle Arbeiten','Organisatorische Arbeiten','Sonstige Arbeiten',
+  'Teamsitzung','Telefonat','Vorbereitung/Nachbereitung',
+  'Unterrichtsverpflichtung','Mehrarbeit-Abbau'
+];
+
+const STORAGE_KEY = 'fbz_entries_v1';
+const APIKEY_KEY  = 'fbz_apikey';
+const INSTALL_KEY = 'fbz_install_dismissed';
+
+let currentImage   = null;
+let pendingEntries = [];
+let activeKWFilter = 'all';
+
+// ── Utils ──
+const getEntries  = () => JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+const saveEntries = arr => localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+const getApiKey   = () => localStorage.getItem(APIKEY_KEY) || '';
+
+function isoWeek(dateStr) {
+  const d = new Date(dateStr);
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+  const y = new Date(d.getFullYear(), 0, 1);
+  return Math.ceil((((d - y) / 86400000) + 1) / 7);
+}
+
+function calcAngerechnet(taetigkeit, minuten) {
+  const m = parseInt(minuten) || 0;
+  if (taetigkeit === 'Unterrichtsverpflichtung') return -(m * 45);
+  if (taetigkeit === 'Mehrarbeit-Abbau')         return -m;
+  if (taetigkeit === 'Fahrt')                    return m;
+  return Math.round(m / 2);
+}
+
+function minToHHMM(min) {
+  const neg = min < 0, abs = Math.abs(min);
+  return (neg ? '-' : '+') + Math.floor(abs/60) + ':' + String(abs%60).padStart(2,'0');
+}
+
+function formatDE(iso) {
+  if (!iso) return '–';
+  const [y,m,d] = iso.split('-');
+  return `${d}.${m}.${y}`;
+}
+
+function toast(msg, dur=2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+// ── Tabs ──
+function switchTab(name, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  el.classList.add('active');
+  if (name === 'list') renderList();
+}
+
+// ── Install Banner ──
+function dismissInstall() {
+  localStorage.setItem(INSTALL_KEY, '1');
+  document.getElementById('install-banner').classList.remove('visible');
+}
+
+// ── API Modal ──
+function openApiModal() {
+  document.getElementById('api-key-input').value = getApiKey();
+  document.getElementById('api-modal').classList.add('open');
+}
+function closeApiModal() { document.getElementById('api-modal').classList.remove('open'); }
+function saveApiKey() {
+  localStorage.setItem(APIKEY_KEY, document.getElementById('api-key-input').value.trim());
+  closeApiModal();
+  toast('API-Schlüssel gespeichert ✓');
+}
+
+// ── Image ──
+function handleImageSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    currentImage = ev.target.result;
+    const img = document.getElementById('preview-img');
+    img.src = currentImage; img.style.display = 'block';
+    document.getElementById('upload-zone').style.display = 'none';
+    document.getElementById('scan-ready').style.display = 'block';
+    document.getElementById('entries-section').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+function resetScan() {
+  currentImage = null; pendingEntries = [];
+  document.getElementById('preview-img').style.display = 'none';
+  document.getElementById('upload-zone').style.display = 'block';
+  document.getElementById('scan-ready').style.display = 'none';
+  document.getElementById('entries-section').style.display = 'none';
+  document.getElementById('file-input').value = '';
+}
+
+// ── Scan ──
+async function startScan() {
+  if (!getApiKey()) { openApiModal(); toast('Bitte API-Schlüssel eingeben'); return; }
+
+  const dateVal  = document.getElementById('scan-date').value;
+  const weekday  = document.getElementById('scan-weekday').value;
+
+  document.getElementById('scan-ready').style.display = 'none';
+  document.getElementById('loading').style.display = 'block';
+
+  const base64   = currentImage.split(',')[1];
+  const mimeType = currentImage.split(';')[0].split(':')[1];
+
+  const prompt = `Du bist Assistent einer FBZ-Beratungslehrerin. Analysiere diese Klassenbuchseite (${weekday}${dateVal ? ', ' + dateVal : ''}).
+
+Extrahiere ALLE Zeiteinträge. Tätigkeiten (exakt eine wählen):
+Beratung, Coaching, Diagnostik, Elterngespräch, Erkrankung, Fahrt, Fortbildung, Hospitation, Kollegialer Austausch, Konzeptionelle Arbeiten, Organisatorische Arbeiten, Sonstige Arbeiten, Teamsitzung, Telefonat, Vorbereitung/Nachbereitung, Unterrichtsverpflichtung, Mehrarbeit-Abbau
+
+Regeln:
+- Beratungsfall: Kindname/Kürzel wenn erkennbar, sonst "–"
+- Zeitspanne (z.B. 8:30–10:45) → Differenz berechnen (= 135)
+- Fahrt → eigene Zeile, Beratungsfall = Ziel (z.B. "GS Dohr")
+- Unterrichtsverpflichtung → Eingabe in STUNDEN
+- "Orga" → Organisatorische Arbeiten
+- "Austausch" → Kollegialer Austausch
+- "Vor-/Nachbereitung" → Vorbereitung/Nachbereitung
+- "Arbeitszeitdoku" → Konzeptionelle Arbeiten
+
+Antworte NUR mit JSON:
+{"eintraege":[{"beratungsfall":"Name oder –","taetigkeit":"aus Liste","minuten":45}],"notizen":"Hinweise oder leer"}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': getApiKey(),
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1500,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 }},
+            { type: 'text', text: prompt }
+          ]
+        }]
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'API-Fehler ' + res.status);
+
+    const match = data.content[0].text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('Kein JSON in der Antwort');
+    const result = JSON.parse(match[0]);
+
+    pendingEntries = result.eintraege || [];
+    renderPending(dateVal, result.notizen);
+
+  } catch (err) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('scan-ready').style.display = 'block';
+    toast('Fehler: ' + err.message, 4000);
+  }
+}
+
+// ── Pending Entries ──
+function renderPending(dateVal, notizen) {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('entries-section').style.display = 'block';
+
+  const list = document.getElementById('entries-list');
+  list.innerHTML = '';
+
+  pendingEntries.forEach((entry, idx) => {
+    const opts = TAETIGKEITEN.map(t =>
+      `<option value="${t}"${t===entry.taetigkeit?' selected':''}>${t}</option>`).join('');
+
+    const div = document.createElement('div');
+    div.className = 'entry-item';
+    div.id = 'pe-' + idx;
+    div.innerHTML = `
+      <div class="entry-row">
+        <input class="entry-field" type="date" value="${dateVal}" id="pe-d-${idx}" style="flex:0 0 145px">
+        <input class="entry-field" placeholder="Beratungsfall" value="${entry.beratungsfall||'–'}" id="pe-f-${idx}">
+      </div>
+      <div class="entry-row">
+        <select class="select-field" id="pe-t-${idx}">${opts}</select>
+        <input class="entry-field min" type="number" min="1" value="${entry.minuten}" id="pe-m-${idx}">
+      </div>
+      <div class="entry-actions">
+        <button class="btn-confirm" onclick="confirmEntry(${idx})">✓ Speichern</button>
+        <button class="btn-delete"  onclick="deleteEntry(${idx})">🗑</button>
+      </div>
+      <div class="entry-confirmed-badge">✓ Gespeichert</div>`;
+    list.appendChild(div);
+  });
+
+  const nb = document.getElementById('notes-box');
+  if (notizen && notizen.trim()) { nb.textContent = '⚠ ' + notizen; nb.classList.add('visible'); }
+  else nb.classList.remove('visible');
+
+  toast(`${pendingEntries.length} Einträge erkannt`);
+}
+
+function confirmEntry(idx) {
+  const dateVal = document.getElementById(`pe-d-${idx}`).value;
+  if (!dateVal) { toast('Bitte Datum eintragen'); return; }
+
+  const taet = document.getElementById(`pe-t-${idx}`).value;
+  const min  = parseInt(document.getElementById(`pe-m-${idx}`).value) || 0;
+  const fall = document.getElementById(`pe-f-${idx}`).value;
+
+  const entry = {
+    id: Date.now() + idx,
+    datum: dateVal,
+    kw: isoWeek(dateVal),
+    beratungsfall: fall,
+    taetigkeit: taet,
+    minuten: min,
+    angerechnet: calcAngerechnet(taet, min)
+  };
+
+  const entries = getEntries();
+  entries.push(entry);
+  saveEntries(entries);
+
+  document.getElementById('pe-' + idx).classList.add('confirmed');
+  toast('Eintrag gespeichert ✓');
+}
+
+function deleteEntry(idx) {
+  document.getElementById('pe-' + idx).remove();
+}
+
+function confirmAll() {
+  let saved = 0;
+  pendingEntries.forEach((_, idx) => {
+    const el = document.getElementById('pe-' + idx);
+    if (el && !el.classList.contains('confirmed')) { confirmEntry(idx); saved++; }
+  });
+  if (saved === 0) toast('Alle bereits gespeichert ✓');
+  else toast(`${saved} Einträge gespeichert ✓`);
+}
+
+// ── List ──
+function renderList() {
+  const entries = getEntries();
+
+  const saldo = entries.reduce((s,e) => s + (e.angerechnet||0), 0);
+  document.getElementById('stat-entries').textContent = entries.length;
+  const se = document.getElementById('stat-saldo');
+  se.textContent = minToHHMM(saldo);
+  se.className = 'stat-val ' + (saldo >= 0 ? 'pos' : 'neg');
+
+  const kws = [...new Set(entries.map(e => e.kw))].sort((a,b) => a-b);
+  const fr = document.getElementById('kw-filters');
+  fr.innerHTML = `<div class="filter-chip${activeKWFilter==='all'?' active':''}" onclick="filterKW('all',this)">Alle KW</div>`;
+  kws.forEach(kw => {
+    const c = document.createElement('div');
+    c.className = 'filter-chip' + (activeKWFilter==kw?' active':'');
+    c.textContent = 'KW ' + kw;
+    c.onclick = function(){ filterKW(kw, this); };
+    fr.appendChild(c);
+  });
+
+  const filtered = activeKWFilter === 'all'
+    ? entries
+    : entries.filter(e => e.kw == activeKWFilter);
+
+  const log = document.getElementById('entries-log');
+  if (!filtered.length) {
+    log.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Noch keine Einträge.<br>Starte mit dem Scannen.</div></div>';
+    return;
+  }
+
+  log.innerHTML = [...filtered]
+    .sort((a,b) => b.datum.localeCompare(a.datum))
+    .map(e => `
+    <div class="entry-log-item">
+      <div>
+        <span class="kw-badge">KW${e.kw}</span>
+        <div class="entry-date-badge">${formatDE(e.datum)}</div>
+      </div>
+      <div class="entry-log-details">
+        <div class="entry-log-taet">${e.taetigkeit}</div>
+        <div class="entry-log-fall">${e.beratungsfall||'–'}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="entry-log-min${e.angerechnet<0?' neg':''}">${e.minuten} min</div>
+        <div style="font-size:10px;color:var(--ink3);margin-top:2px">→ ${e.angerechnet} ang.</div>
+      </div>
+    </div>`).join('');
+}
+
+function filterKW(kw, el) {
+  activeKWFilter = kw;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderList();
+}
+
+// ── Export ──
+function exportCSV() {
+  const entries = getEntries();
+  if (!entries.length) { toast('Keine Einträge zum Exportieren'); return; }
+
+  const rows = entries
+    .sort((a,b) => a.datum.localeCompare(b.datum))
+    .map(e => `${formatDE(e.datum)};${e.kw};${e.beratungsfall||'–'};${e.taetigkeit};${e.minuten};${e.angerechnet}`)
+    .join('\n');
+
+  const blob = new Blob(
+    ['\uFEFF' + 'Datum;KW;Beratungsfall;Tätigkeit;Minuten erfasst;Angerechnet (min)\n' + rows],
+    { type: 'text/csv;charset=utf-8;' }
+  );
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `FBZ_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  toast('CSV heruntergeladen ✓');
+}
+
+function clearAllEntries() {
+  if (!confirm('Wirklich alle Einträge löschen?\nVorher bitte CSV exportieren!')) return;
+  saveEntries([]);
+  renderList();
+  toast('Alle Einträge gelöscht');
+}
+
+// ── Service Worker ──
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', () => {
+  const today = new Date();
+  document.getElementById('scan-date').value = today.toISOString().slice(0,10);
+  const days = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
+  const sel = document.getElementById('scan-weekday');
+  for (let o of sel.options) if (o.value === days[today.getDay()]) { o.selected = true; break; }
+
+  if (!getApiKey()) setTimeout(() => toast('⚙ Bitte API-Schlüssel eintragen'), 800);
+
+  // Install Banner (nur beim ersten Besuch, nur wenn nicht schon als PWA)
+  const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+  if (!isStandalone && !localStorage.getItem(INSTALL_KEY)) {
+    setTimeout(() => document.getElementById('install-banner').classList.add('visible'), 2000);
+  }
+});
+</script>
+</body>
+</html>
