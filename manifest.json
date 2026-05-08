@@ -2,7 +2,7 @@
   "name": "FBZ Zeiterfassung",
   "short_name": "FBZ",
   "description": "Arbeitszeiterfassung für das Förder- und Beratungszentrum",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#1a1f2e",
   "theme_color": "#1a1f2e",
